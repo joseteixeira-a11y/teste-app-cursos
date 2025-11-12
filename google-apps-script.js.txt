@@ -1,6 +1,20 @@
 // ====================================================================================
 // Google Apps Script - Backend para Gerenciador de Cursos
 // ====================================================================================
+// 🚨 SOLUÇÃO DE PROBLEMAS (TROUBLESHOOTING) 🚨
+//
+// ERRO: "Não foi possível identificar o usuário. (...)"
+//
+// Se você está vendo este erro, a causa em 99% dos casos é a configuração "Executar como".
+// Para que `Session.getActiveUser().getEmail()` funcione, o script PRECISA ser executado
+// com a sua identidade (a do dono da planilha).
+//
+// SOLUÇÃO: Vá em "Implantar" > "Gerenciar Implantações", edite (✎) sua implantação e
+// GARANTA que a configuração "Executar como" esteja definida como "Eu (seu-email@exemplo.com)".
+// A outra configuração, "Quem pode acessar", deve ser "Qualquer pessoa".
+// AMBAS precisam estar corretas. Após corrigir, crie uma NOVA VERSÃO.
+//
+// ====================================================================================
 // INSTRUÇÕES DE IMPLANTAÇÃO:
 // 1. Abra o Google Drive e crie uma nova Planilha (Google Sheet).
 // 2. Renomeie a planilha para "CursosDB".
@@ -12,12 +26,16 @@
 // 7. Na janela que abrir:
 //    - Clique no ícone de engrenagem ao lado de "Selecione o tipo" e escolha "App da Web".
 //    - Dê uma descrição (opcional, ex: "API para CRUD de cursos").
-//    - **[MUITO IMPORTANTE]** Em "Executar como", selecione "Eu (seu-email@gmail.com)".
-//    - **[MUITO IMPORTANTE]** Em "Quem pode acessar", selecione "Qualquer pessoa".
+//    - 🚨 CONFIGURAÇÃO CRÍTICA #1: Em "Executar como", selecione "Eu (seu-email@gmail.com)".
+//        -> ESSENCIAL para o script identificar seu e-mail. Causa o erro de "usuário não identificado".
+//    - 🚨 CONFIGURAÇÃO CRÍTICA #2: Em "Quem pode acessar", selecione "Qualquer pessoa".
+//        -> ESSENCIAL para permitir que sua aplicação web chame a API. Causa o erro "Failed to fetch".
 // 8. Clique em "Implantar".
 // 9. O Google pedirá autorização. Siga os passos para autorizar o script. Pode ser necessário clicar em "Avançado" e "Acessar projeto..." (não seguro).
 // 10. Após a implantação, uma URL do app da Web será exibida. COPIE essa URL.
 // 11. Cole a URL copiada na constante `SCRIPT_URL` no arquivo `src/services/sheetService.ts` do seu projeto React.
+// ====================================================================================
+// **LEMBRE-SE:** Sempre que você alterar este script, você DEVE criar uma "Nova versão" em "Gerenciar implantações" para que as alterações entrem em vigor.
 // ====================================================================================
 
 
@@ -110,7 +128,7 @@ function handleCreate(data) {
   const userEmail = user ? user.getEmail() : null;
   
   // Esta verificação é crucial. Se a implantação não estiver configurada corretamente
-  // ("Executar como: Eu" e "Quem pode acessar: Qualquer pessoa"), getEmail() falhará.
+  // ("Executar como: Eu"), getEmail() falhará.
   if (!userEmail) {
     throw new Error('Não foi possível identificar o usuário. Certifique-se de que está logado em uma conta Google e que concedeu as permissões necessárias. Verifique se a implantação do App da Web está configurada para ser executada como você e o acesso é para "Qualquer pessoa".');
   }

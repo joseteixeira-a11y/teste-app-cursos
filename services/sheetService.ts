@@ -21,7 +21,33 @@ import type { Course } from '../types';
 // **LEMBRE-SE:** Sempre que você alterar o código no `google-apps-script.js.txt`,
 // você DEVE fazer uma NOVA IMPLANTAÇÃO para que as alterações entrem em vigor.
 // (Vá em: Implantar > Gerenciar Implantações > Editar ✎ > Versão: Nova versão > Implantar)
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxshSd4W5XW6JbJIK6d2SJ9sWPfKMkJrmxzk-iGU78zqWRrabA8rEKx8f7PHUoqeB411Q/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzSJNu_ubFLUMGXBW4k5FB1GbYYlXbVfuOHQ_UzrADtKx3xNWElzZOUY7ph1zdTqqqUoA/exec'; 
+
+/**
+ * Função auxiliar de fetch com tratamento de erro aprimorado para diagnosticar
+ * problemas comuns de conexão com o Google Apps Script.
+ */
+const fetchWithEnhancedErrorHandling = async (url: string, options?: RequestInit): Promise<Response> => {
+  try {
+    const response = await fetch(url, options);
+    return response;
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      throw new Error(
+        'Falha de Conexão (Failed to fetch): Não foi possível conectar-se à API do Google Sheets. ' +
+        'Isso geralmente ocorre por um problema de CORS ou de configuração na implantação do Apps Script.\n\n' +
+        'Verifique os seguintes pontos CRÍTICOS:\n' +
+        '1. A URL do Script neste arquivo (`services/sheetService.ts`) está 100% correta?\n' +
+        '2. Você criou uma "NOVA VERSÃO" na sua implantação do Apps Script após a última alteração de código?\n' +
+        '3. A implantação está configurada para "Executar como: EU" e "Quem pode acessar: QUALQUER PESSOA"?\n' +
+        '4. Abra o console do navegador (F12) e verifique a aba "Rede" (Network) para ver detalhes do erro.'
+      );
+    }
+    // Re-lança outros tipos de erro
+    throw error;
+  }
+};
+
 
 // Função auxiliar para lidar com as respostas da API
 const handleResponse = async (response: Response) => {
@@ -40,7 +66,7 @@ const handleResponse = async (response: Response) => {
  * Busca todos os cursos.
  */
 export const getCourses = async (): Promise<Course[]> => {
-  const response = await fetch(`${SCRIPT_URL}?action=read`);
+  const response = await fetchWithEnhancedErrorHandling(`${SCRIPT_URL}?action=read`);
   const data = await handleResponse(response);
   // Ordena os cursos por data de criação, do mais recente para o mais antigo
   return data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -58,7 +84,7 @@ export const addCourse = async (
     action: 'create',
     data: courseData,
   };
-  const response = await fetch(SCRIPT_URL, {
+  const response = await fetchWithEnhancedErrorHandling(SCRIPT_URL, {
     method: 'POST',
     body: JSON.stringify(payload),
     headers: {
@@ -77,7 +103,7 @@ export const updateCourse = async (id: string, courseData: Partial<Omit<Course, 
     id: id,
     data: courseData,
   };
-  const response = await fetch(SCRIPT_URL, {
+  const response = await fetchWithEnhancedErrorHandling(SCRIPT_URL, {
     method: 'POST',
     body: JSON.stringify(payload),
     headers: {
@@ -95,7 +121,7 @@ export const deleteCourse = async (id: string): Promise<{ success: boolean }> =>
     action: 'delete',
     id: id,
   };
-  const response = await fetch(SCRIPT_URL, {
+  const response = await fetchWithEnhancedErrorHandling(SCRIPT_URL, {
     method: 'POST',
     body: JSON.stringify(payload),
     headers: {
