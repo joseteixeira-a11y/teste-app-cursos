@@ -45,16 +45,15 @@ export const getCourses = async (): Promise<Course[]> => {
 
 /**
  * Adiciona um novo curso.
+ * O e-mail do operador é capturado automaticamente pelo script no backend.
  * @param courseData - Os dados do curso a ser adicionado.
- * @param userEmail - O e-mail do operador que está adicionando o curso.
  */
 export const addCourse = async (
   courseData: Omit<Course, 'id' | 'userEmail' | 'createdAt'>,
-  userEmail: string
 ): Promise<Course> => {
   const payload = {
     action: 'create',
-    data: { ...courseData, userEmail }, // Adiciona o e-mail ao payload
+    data: courseData,
   };
   const response = await fetch(SCRIPT_URL, {
     method: 'POST',

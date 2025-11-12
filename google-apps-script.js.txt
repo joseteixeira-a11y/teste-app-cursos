@@ -106,9 +106,14 @@ function handleRead() {
  */
 function handleCreate(data) {
   const sheet = getSheet();
-  const userEmail = data.userEmail;
-  if (!userEmail || typeof userEmail !== 'string' || userEmail.trim() === '') {
-    throw new Error('O e-mail do operador é obrigatório e não foi fornecido.');
+  const user = Session.getActiveUser();
+  const userEmail = user ? user.getEmail() : null;
+  
+  // Esta verificação é crucial. Se o script for executado de forma anônima
+  // (se "Quem pode acessar" estiver como "Qualquer pessoa, anônima"),
+  // getEmail() retornará uma string vazia.
+  if (!userEmail) {
+    throw new Error('Não foi possível identificar o usuário. Certifique-se de que está logado em uma conta Google e que concedeu as permissões necessárias. Verifique se a implantação do App da Web está configurada para ser executada como você e o acesso é para "Qualquer pessoa".');
   }
 
   const newId = Utilities.getUuid();
