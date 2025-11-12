@@ -1,0 +1,171 @@
+// ====================================================================================
+// Google Apps Script - Backend para Gerenciador de Cursos
+// ====================================================================================
+// INSTRUÇÕES DE IMPLANTAÇÃO:
+// 1. Abra o Google Drive e crie uma nova Planilha (Google Sheet).
+// 2. Renomeie a planilha para "CursosDB".
+// 3. Na primeira linha (cabeçalho), adicione as seguintes colunas, EXATAMENTE nesta ordem:
+//    id | description | isSecurity | isUdemy | userEmail | createdAt
+// 4. No menu da planilha, vá em "Extensões" > "Apps Script".
+// 5. Apague todo o código que estiver no editor e cole este código. Salve o projeto (dê um nome, ex: "API Cursos").
+// 6. Clique em "Implantar" > "Nova implantação".
+// 7. Na janela que abrir:
+//    - Clique no ícone de engrenagem ao lado de "Selecione o tipo" e escolha "App da Web".
+//    - Dê uma descrição (opcional, ex: "API para CRUD de cursos").
+//    - Em "Executar como", selecione "Eu (seu-email@gmail.com)".
+//    - Em "Quem pode acessar", selecione "Qualquer pessoa" (ATENÇÃO: Isso torna sua API pública. Para um app real, você precisaria de autenticação mais robusta).
+// 8. Clique em "Implantar".
+// 9. O Google pedirá autorização para que o script acesse sua planilha. Clique em "Autorizar acesso", escolha sua conta,
+//    vá em "Avançado" e "Acessar (nome do projeto) (não seguro)" e, por fim, "Permitir".
+// 10. Após a implantação, uma URL do app da Web será exibida. COPIE essa URL.
+// 11. Cole a URL copiada na constante `SCRIPT_URL` no arquivo `src/services/sheetService.ts` do seu projeto React.
+// ====================================================================================
+
+const SHEET_NAME = 'CursosDB';
+const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+
+// Verificação de segurança: Garante que a planilha foi encontrada.
+if (!sheet) {
+  throw new Error(`A planilha com o nome "${SHEET_NAME}" não foi encontrada. Verifique o nome da aba na sua planilha.`);
+}
+
+
+// Roteador principal para requisições GET
+function doGet(e) {
+  const action = e.parameter.action;
+  
+  if (action === 'read') {
+    return handleRead();
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Ação inválida' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Roteador principal para requisições POST
+function doPost(e) {
+  try {
+    const requestData = JSON.parse(e.postData.contents);
+    const action = requestData.action;
+
+    switch (action) {
+      case 'create':
+        return handleCreate(requestData.data);
+      case 'update':
+        return handleUpdate(requestData.id, requestData.data);
+      case 'delete':
+        return handleDelete(requestData.id);
+      default:
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Ação inválida' }))
+          .setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// Lida com a leitura de todos os dados
+function handleRead() {
+  const data = sheet.getDataRange().getValues();
+  const headers = data.shift(); // Remove o cabeçalho
+  
+  const result = data.map(row => {
+    let course = {};
+    headers.forEach((header, index) => {
+      // Converte 'TRUE'/'FALSE' para booleano
+      if (header === 'isSecurity' || header === 'isUdemy') {
+        course[header] = row[index] === true || row[index].toString().toLowerCase() === 'true';
+      } else {
+        course[header] = row[index];
+      }
+    });
+    return course;
+  });
+  
+  return ContentService.createTextOutput(JSON.stringify({ status: 'success', data: result }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Lida com a criação de um novo registro
+function handleCreate(data) {
+  const userEmail = Session.getActiveUser().getEmail();
+  if (!userEmail) {
+    throw new Error('Não foi possível identificar o usuário. Por favor, faça login em uma conta Google e tente novamente.');
+  }
+
+  const newId = Utilities.getUuid();
+  const creationDate = new Date().toISOString();
+  
+  const newRow = [
+    newId,
+    data.description,
+    data.isSecurity,
+    data.isUdemy,
+    userEmail, // E-mail capturado automaticamente da sessão
+    creationDate
+  ];
+  sheet.appendRow(newRow);
+  
+  const newCourse = { 
+    ...data, 
+    id: newId, 
+    userEmail: userEmail, 
+    createdAt: creationDate 
+  };
+
+  return ContentService.createTextOutput(JSON.stringify({ status: 'success', data: newCourse }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Encontra a linha pelo ID
+function findRowById(id) {
+    const ids = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues().flat();
+    const rowIndex = ids.indexOf(id);
+    return rowIndex === -1 ? -1 : rowIndex + 2; // +2 porque o índice é 0-based e a planilha é 1-based com cabeçalho
+}
+
+
+// Lida com a atualização de um registro
+function handleUpdate(id, data) {
+  const rowNum = findRowById(id);
+  if (rowNum === -1) {
+    throw new Error('Curso não encontrado para atualização.');
+  }
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const descriptionCol = headers.indexOf('description') + 1;
+  const isSecurityCol = headers.indexOf('isSecurity') + 1;
+  const isUdemyCol = headers.indexOf('isUdemy') + 1;
+
+  sheet.getRange(rowNum, descriptionCol).setValue(data.description);
+  sheet.getRange(rowNum, isSecurityCol).setValue(data.isSecurity);
+  sheet.getRange(rowNum, isUdemyCol).setValue(data.isUdemy);
+
+  // Lê a linha atualizada para retornar
+  const updatedRowData = sheet.getRange(rowNum, 1, 1, sheet.getLastColumn()).getValues()[0];
+  let updatedCourse = {};
+   headers.forEach((header, index) => {
+      // Converte 'TRUE'/'FALSE' para booleano ao retornar
+      if (header === 'isSecurity' || header === 'isUdemy') {
+        updatedCourse[header] = updatedRowData[index] === true || updatedRowData[index].toString().toLowerCase() === 'true';
+      } else {
+        updatedCourse[header] = updatedRowData[index];
+      }
+    });
+  
+  return ContentService.createTextOutput(JSON.stringify({ status: 'success', data: updatedCourse }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+// Lida com a exclusão de um registro
+function handleDelete(id) {
+    const rowNum = findRowById(id);
+    if (rowNum === -1) {
+        throw new Error('Curso não encontrado para exclusão.');
+    }
+    sheet.deleteRow(rowNum);
+    return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Curso deletado' }))
+        .setMimeType(ContentService.MimeType.JSON);
+}

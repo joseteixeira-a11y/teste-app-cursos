@@ -1,0 +1,5 @@
+{
+  "name": "Copy of Gerenciador de Cursos com Google Sheets",
+  "description": "Uma aplicação CRUD para gerenciar cursos, utilizando uma planilha do Google Sheets como banco dedados. Permite criar, ler, atualizar e deletar registros de cursos com informações sobre a área de segurança e plataforma Udemy.",
+  "requestFramePermissions": []
+}
