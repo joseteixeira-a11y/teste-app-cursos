@@ -89,9 +89,10 @@ function handleRead() {
 
 // Lida com a criação de um novo registro
 function handleCreate(data) {
-  const userEmail = Session.getActiveUser().getEmail();
-  if (!userEmail) {
-    throw new Error('Não foi possível identificar o usuário. Por favor, faça login em uma conta Google e tente novamente.');
+  // O e-mail agora é enviado pelo frontend
+  const userEmail = data.userEmail;
+  if (!userEmail || typeof userEmail !== 'string' || userEmail.trim() === '') {
+    throw new Error('O e-mail do operador é obrigatório e não foi fornecido.');
   }
 
   const newId = Utilities.getUuid();
@@ -102,15 +103,17 @@ function handleCreate(data) {
     data.description,
     data.isSecurity,
     data.isUdemy,
-    userEmail, // E-mail capturado automaticamente da sessão
+    userEmail.trim(), // E-mail vindo do payload da requisição
     creationDate
   ];
   sheet.appendRow(newRow);
   
   const newCourse = { 
-    ...data, 
+    description: data.description,
+    isSecurity: data.isSecurity,
+    isUdemy: data.isUdemy,
+    userEmail: userEmail.trim(),
     id: newId, 
-    userEmail: userEmail, 
     createdAt: creationDate 
   };
 

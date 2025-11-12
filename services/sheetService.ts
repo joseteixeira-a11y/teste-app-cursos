@@ -18,7 +18,7 @@ import type { Course } from '../types';
 // ====================================================================================
 
 // IMPORTANTE: Cole aqui a URL do seu Web App do Google Apps Script
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzz-9kKYwAoi1r1rZi8hjMd-s9s_EqeJagPVHSIhzEsdsD5ReenetqD-bJObnnJkNz6mQ/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIMFdoV96gv0ctTCag1pTjnG98e3dhjfyfU4ZaXiFZUSSsspT0bBwHGGuU1eGoc_KNuQ/exec'; 
 
 // Função auxiliar para lidar com as respostas da API
 const handleResponse = async (response: Response) => {
@@ -45,13 +45,16 @@ export const getCourses = async (): Promise<Course[]> => {
 
 /**
  * Adiciona um novo curso.
+ * @param courseData - Os dados do curso a ser adicionado.
+ * @param userEmail - O e-mail do operador que está adicionando o curso.
  */
 export const addCourse = async (
-  courseData: Omit<Course, 'id' | 'userEmail' | 'createdAt'>
+  courseData: Omit<Course, 'id' | 'userEmail' | 'createdAt'>,
+  userEmail: string
 ): Promise<Course> => {
   const payload = {
     action: 'create',
-    data: courseData,
+    data: { ...courseData, userEmail }, // Adiciona o e-mail ao payload
   };
   const response = await fetch(SCRIPT_URL, {
     method: 'POST',
