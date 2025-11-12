@@ -13,36 +13,47 @@
 //    - Clique no ícone de engrenagem ao lado de "Selecione o tipo" e escolha "App da Web".
 //    - Dê uma descrição (opcional, ex: "API para CRUD de cursos").
 //    - Em "Executar como", selecione "Eu (seu-email@gmail.com)".
-//    - Em "Quem pode acessar", selecione "Qualquer pessoa" (ATENÇÃO: Isso torna sua API pública. Para um app real, você precisaria de autenticação mais robusta).
+//    - Em "Quem pode acessar", selecione "Qualquer pessoa".
 // 8. Clique em "Implantar".
-// 9. O Google pedirá autorização para que o script acesse sua planilha. Clique em "Autorizar acesso", escolha sua conta,
-//    vá em "Avançado" e "Acessar (nome do projeto) (não seguro)" e, por fim, "Permitir".
+// 9. O Google pedirá autorização. Siga os passos para autorizar o script.
 // 10. Após a implantação, uma URL do app da Web será exibida. COPIE essa URL.
 // 11. Cole a URL copiada na constante `SCRIPT_URL` no arquivo `src/services/sheetService.ts` do seu projeto React.
 // ====================================================================================
 
-const SHEET_NAME = 'CursosDB';
-const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
 
-// Verificação de segurança: Garante que a planilha foi encontrada.
-if (!sheet) {
-  throw new Error(`A planilha com o nome "${SHEET_NAME}" não foi encontrada. Verifique o nome da aba na sua planilha.`);
-}
-
-
-// Roteador principal para requisições GET
-function doGet(e) {
-  const action = e.parameter.action;
-  
-  if (action === 'read') {
-    return handleRead();
+/**
+ * Função auxiliar para obter a planilha de forma segura.
+ * Lança um erro se a planilha não for encontrada.
+ * @returns {Sheet} O objeto da planilha.
+ */
+function getSheet() {
+  const SHEET_NAME = 'CursosDB';
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    throw new Error(`A planilha com o nome "${SHEET_NAME}" não foi encontrada. Verifique se a aba na sua planilha tem exatamente este nome.`);
   }
-  
-  return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Ação inválida' }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return sheet;
 }
 
-// Roteador principal para requisições POST
+/**
+ * Lida com as requisições GET. Roteia para a ação apropriada.
+ */
+function doGet(e) {
+  try {
+    const action = e.parameter.action;
+    if (action === 'read') {
+      return handleRead();
+    }
+    throw new Error('Ação GET inválida ou não especificada.');
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Lida com as requisições POST. Roteia para a ação apropriada.
+ */
 function doPost(e) {
   try {
     const requestData = JSON.parse(e.postData.contents);
@@ -56,26 +67,29 @@ function doPost(e) {
       case 'delete':
         return handleDelete(requestData.id);
       default:
-        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Ação inválida' }))
-          .setMimeType(ContentService.MimeType.JSON);
+        throw new Error('Ação POST inválida ou não especificada.');
     }
   } catch (error) {
+    // Log do erro para depuração no Apps Script
+    console.error(`Erro em doPost: ${error.toString()} Stack: ${error.stack}`);
     return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-// Lida com a leitura de todos os dados
+/**
+ * Lê todos os registros da planilha.
+ */
 function handleRead() {
+  const sheet = getSheet();
   const data = sheet.getDataRange().getValues();
   const headers = data.shift(); // Remove o cabeçalho
   
   const result = data.map(row => {
     let course = {};
     headers.forEach((header, index) => {
-      // Converte 'TRUE'/'FALSE' para booleano
       if (header === 'isSecurity' || header === 'isUdemy') {
-        course[header] = row[index] === true || row[index].toString().toLowerCase() === 'true';
+        course[header] = row[index] === true || String(row[index]).toLowerCase() === 'true';
       } else {
         course[header] = row[index];
       }
@@ -87,9 +101,11 @@ function handleRead() {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// Lida com a criação de um novo registro
+/**
+ * Cria um novo registro na planilha.
+ */
 function handleCreate(data) {
-  // O e-mail agora é enviado pelo frontend
+  const sheet = getSheet();
   const userEmail = data.userEmail;
   if (!userEmail || typeof userEmail !== 'string' || userEmail.trim() === '') {
     throw new Error('O e-mail do operador é obrigatório e não foi fornecido.');
@@ -103,17 +119,17 @@ function handleCreate(data) {
     data.description,
     data.isSecurity,
     data.isUdemy,
-    userEmail.trim(), // E-mail vindo do payload da requisição
+    userEmail.trim(),
     creationDate
   ];
   sheet.appendRow(newRow);
   
   const newCourse = { 
+    id: newId, 
     description: data.description,
     isSecurity: data.isSecurity,
     isUdemy: data.isUdemy,
     userEmail: userEmail.trim(),
-    id: newId, 
     createdAt: creationDate 
   };
 
@@ -121,16 +137,24 @@ function handleCreate(data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// Encontra a linha pelo ID
+/**
+ * Encontra o número da linha com base em um ID.
+ * @param {string} id - O ID do curso a ser encontrado.
+ * @returns {number} O número da linha (baseado em 1) ou -1 se não for encontrado.
+ */
 function findRowById(id) {
+    const sheet = getSheet();
+    // getValues() pode ser lento em planilhas grandes, mas é suficiente para este caso.
     const ids = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues().flat();
     const rowIndex = ids.indexOf(id);
     return rowIndex === -1 ? -1 : rowIndex + 2; // +2 porque o índice é 0-based e a planilha é 1-based com cabeçalho
 }
 
-
-// Lida com a atualização de um registro
+/**
+ * Atualiza um registro existente.
+ */
 function handleUpdate(id, data) {
+  const sheet = getSheet();
   const rowNum = findRowById(id);
   if (rowNum === -1) {
     throw new Error('Curso não encontrado para atualização.');
@@ -141,17 +165,20 @@ function handleUpdate(id, data) {
   const isSecurityCol = headers.indexOf('isSecurity') + 1;
   const isUdemyCol = headers.indexOf('isUdemy') + 1;
 
+  // Valida se as colunas foram encontradas
+  if(!descriptionCol || !isSecurityCol || !isUdemyCol) {
+    throw new Error("Uma ou mais colunas de cabeçalho necessárias (description, isSecurity, isUdemy) não foram encontradas.");
+  }
+
   sheet.getRange(rowNum, descriptionCol).setValue(data.description);
   sheet.getRange(rowNum, isSecurityCol).setValue(data.isSecurity);
   sheet.getRange(rowNum, isUdemyCol).setValue(data.isUdemy);
 
-  // Lê a linha atualizada para retornar
   const updatedRowData = sheet.getRange(rowNum, 1, 1, sheet.getLastColumn()).getValues()[0];
   let updatedCourse = {};
    headers.forEach((header, index) => {
-      // Converte 'TRUE'/'FALSE' para booleano ao retornar
       if (header === 'isSecurity' || header === 'isUdemy') {
-        updatedCourse[header] = updatedRowData[index] === true || updatedRowData[index].toString().toLowerCase() === 'true';
+        updatedCourse[header] = updatedRowData[index] === true || String(updatedRowData[index]).toLowerCase() === 'true';
       } else {
         updatedCourse[header] = updatedRowData[index];
       }
@@ -161,9 +188,11 @@ function handleUpdate(id, data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-
-// Lida com a exclusão de um registro
+/**
+ * Exclui um registro.
+ */
 function handleDelete(id) {
+    const sheet = getSheet();
     const rowNum = findRowById(id);
     if (rowNum === -1) {
         throw new Error('Curso não encontrado para exclusão.');

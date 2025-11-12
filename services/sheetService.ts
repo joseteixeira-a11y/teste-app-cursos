@@ -18,7 +18,7 @@ import type { Course } from '../types';
 // ====================================================================================
 
 // IMPORTANTE: Cole aqui a URL do seu Web App do Google Apps Script
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIMFdoV96gv0ctTCag1pTjnG98e3dhjfyfU4ZaXiFZUSSsspT0bBwHGGuU1eGoc_KNuQ/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzHiHAYy1FNVFiTc6T_Pggt5LuoDOEr0qe3GPF8Kc9cYGMQMd-0Ytt8PFJlEpcYvlSj_g/exec'; 
 
 // Função auxiliar para lidar com as respostas da API
 const handleResponse = async (response: Response) => {
