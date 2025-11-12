@@ -21,7 +21,7 @@ import type { Course } from '../types';
 // **LEMBRE-SE:** Sempre que você alterar o código no `google-apps-script.js.txt`,
 // você DEVE fazer uma NOVA IMPLANTAÇÃO para que as alterações entrem em vigor.
 // (Vá em: Implantar > Gerenciar Implantações > Editar ✎ > Versão: Nova versão > Implantar)
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpXQp0LYmNUMp2wI0o0YeZDLIp7t2gw3Sq4Rr9g8694uLOl9udJon8CpKy0JV4066ZwA/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxshSd4W5XW6JbJIK6d2SJ9sWPfKMkJrmxzk-iGU78zqWRrabA8rEKx8f7PHUoqeB411Q/exec'; 
 
 // Função auxiliar para lidar com as respostas da API
 const handleResponse = async (response: Response) => {
