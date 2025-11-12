@@ -18,7 +18,10 @@ import type { Course } from '../types';
 // ====================================================================================
 
 // IMPORTANTE: Cole aqui a URL do seu Web App do Google Apps Script
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzHiHAYy1FNVFiTc6T_Pggt5LuoDOEr0qe3GPF8Kc9cYGMQMd-0Ytt8PFJlEpcYvlSj_g/exec'; 
+// **LEMBRE-SE:** Sempre que você alterar o código no `google-apps-script.js.txt`,
+// você DEVE fazer uma NOVA IMPLANTAÇÃO para que as alterações entrem em vigor.
+// (Vá em: Implantar > Gerenciar Implantações > Editar ✎ > Versão: Nova versão > Implantar)
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpXQp0LYmNUMp2wI0o0YeZDLIp7t2gw3Sq4Rr9g8694uLOl9udJon8CpKy0JV4066ZwA/exec'; 
 
 // Função auxiliar para lidar com as respostas da API
 const handleResponse = async (response: Response) => {

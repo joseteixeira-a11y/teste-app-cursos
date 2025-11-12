@@ -12,10 +12,10 @@
 // 7. Na janela que abrir:
 //    - Clique no ícone de engrenagem ao lado de "Selecione o tipo" e escolha "App da Web".
 //    - Dê uma descrição (opcional, ex: "API para CRUD de cursos").
-//    - Em "Executar como", selecione "Eu (seu-email@gmail.com)".
-//    - Em "Quem pode acessar", selecione "Qualquer pessoa".
+//    - **[MUITO IMPORTANTE]** Em "Executar como", selecione "Eu (seu-email@gmail.com)".
+//    - **[MUITO IMPORTANTE]** Em "Quem pode acessar", selecione "Qualquer pessoa".
 // 8. Clique em "Implantar".
-// 9. O Google pedirá autorização. Siga os passos para autorizar o script.
+// 9. O Google pedirá autorização. Siga os passos para autorizar o script. Pode ser necessário clicar em "Avançado" e "Acessar projeto..." (não seguro).
 // 10. Após a implantação, uma URL do app da Web será exibida. COPIE essa URL.
 // 11. Cole a URL copiada na constante `SCRIPT_URL` no arquivo `src/services/sheetService.ts` do seu projeto React.
 // ====================================================================================
@@ -95,7 +95,7 @@ function handleRead() {
       }
     });
     return course;
-  });
+  }).filter(row => row.id); // Garante que não estamos retornando linhas vazias
   
   return ContentService.createTextOutput(JSON.stringify({ status: 'success', data: result }))
     .setMimeType(ContentService.MimeType.JSON);
@@ -109,9 +109,8 @@ function handleCreate(data) {
   const user = Session.getActiveUser();
   const userEmail = user ? user.getEmail() : null;
   
-  // Esta verificação é crucial. Se o script for executado de forma anônima
-  // (se "Quem pode acessar" estiver como "Qualquer pessoa, anônima"),
-  // getEmail() retornará uma string vazia.
+  // Esta verificação é crucial. Se a implantação não estiver configurada corretamente
+  // ("Executar como: Eu" e "Quem pode acessar: Qualquer pessoa"), getEmail() falhará.
   if (!userEmail) {
     throw new Error('Não foi possível identificar o usuário. Certifique-se de que está logado em uma conta Google e que concedeu as permissões necessárias. Verifique se a implantação do App da Web está configurada para ser executada como você e o acesso é para "Qualquer pessoa".');
   }
